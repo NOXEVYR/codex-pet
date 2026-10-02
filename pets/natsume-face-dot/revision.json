@@ -1,14 +1,49 @@
 {
-  "artworkRevision": "2026-10-02-awake-breathing-01",
+  "artworkRevision": "2026-10-02-work-expression-02",
   "status": "debug",
   "spriteVersionNumber": 2,
   "width": 1536,
   "height": 2288,
-  "encodedBytes": 2746680,
-  "sha256": "5fb8f25a57540be78224866ae6d711136259138039bc8098d681f6304baad5ec",
-  "changedRows": [0],
-  "idleFrameDurationsMs": [1680,660,660,840,840,1920],
-  "hostTimingEvidence": "Installed Codex 26.928.3736.0; web real-time cadence not independently measured",
-  "validation": "Pets structural validator and bundled quality gate passed; native-size and 64px independent visual review passed",
-  "remaining": "Actual Dot experience and other clients require continued testing"
+  "encodedBytes": 2739714,
+  "sha256": "97ffec59aeab2288a88f27abc7f619de2571b5e4286c17a19896bf31b8bf040d",
+  "previousLocalRevision": {
+    "artworkRevision": "2026-10-02-awake-breathing-01",
+    "sha256": "5fb8f25a57540be78224866ae6d711136259138039bc8098d681f6304baad5ec"
+  },
+  "changedRowsThisRevision": [7],
+  "cumulativeChangedRowsAcrossRounds": [0, 7],
+  "idleFrameDurationsMs": [1680, 660, 660, 840, 840, 1920],
+  "idleCycleMs": 6600,
+  "workFrameDurationsMs": [120, 120, 120, 120, 120, 220],
+  "workCycleMs": 820,
+  "previewFiles": {
+    "idle": "idle-host-preview.gif",
+    "workFiveCycles": "work-host-preview.gif",
+    "idleWorkIdle": "idle-work-host-preview.gif"
+  },
+  "verification": {
+    "atlasStructure": "passed",
+    "encodedQuality": "passed",
+    "independentVisualReview": "passed",
+    "automatedTests": 27,
+    "inlineUiScenarioTests": 12,
+    "virtualScenarioAssertions": 33,
+    "simulatedDurationHours": 8,
+    "realEightHourRun": false,
+    "hostFpsChanged": false,
+    "cloudSync": "verified-content-and-selection",
+    "roundTwoCloudVerification": {
+      "sameExistingEntry": true,
+      "redownloadedCloudPngMatchesCandidatePublicNativeAndCanonicalRgba": true,
+      "freshBrowserSelectionConfirmed": true,
+      "oldBlinkArchiveSelected": false,
+      "actualDotLongSession": "not-verified",
+      "nativeUiPlayback": "not-verified"
+    },
+    "realDotEndToEnd": "not-verified"
+  },
+  "nextIteration": [
+    "idle shallow-smile / curiosity variation",
+    "gaze transition around 067.5 to 090 degrees"
+  ]
 }

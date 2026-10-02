@@ -45,7 +45,7 @@ Windows / .NET Framework 4.x。解压后打开 `NatsumePet/NatsumePet.exe`；EXE
 
 ## Dot 脸部动画调试
 
-Dot 的脸部动画与 Windows 桌宠程序使用不同的素材和播放方式。当前正在按宿主的实际慢速待机节奏迭代，尚未作为正式版本发布。[睁眼呼吸调试素材](pets/natsume-face-dot/README.md) 包含图集和正常节奏预览；[本地节奏预览工具](tools/dot-pet-preview/README.md) 可检查自己的图集；[调试与验收说明](docs/DOT-ANIMATION-DEBUG.md) 记录播放限制和检查方法。
+Dot 的脸部动画与 Windows 桌宠程序使用不同的素材和播放方式。当前正在按宿主的实际慢速待机节奏迭代，尚未作为正式版本发布。[睁眼呼吸调试素材](pets/natsume-face-dot/README.md) 包含图集和正常节奏预览；[本地节奏预览工具](tools/dot-pet-preview/README.md) 可检查自己的图集；[调试与验收说明](docs/DOT-ANIMATION-DEBUG.md) 记录播放限制和检查方法；[持续迭代记录](docs/DOT-ITERATION-PLAN.md) 跟踪表情与 Dot 模式适配。
 
 ## 从源码构建
 

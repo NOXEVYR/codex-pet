@@ -10,6 +10,7 @@ const {
   sequenceDuration,
   validateAtlasDimensions,
 } = globalThis.DotPetTiming;
+const { createDotModeController, resolveDotState } = globalThis.DotPetMode;
 
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
 const $ = (selector) => document.querySelector(selector);
@@ -19,6 +20,10 @@ const stateSelect = $("#state-select");
 const loopToggle = $("#loop-toggle");
 const pixelToggle = $("#pixel-toggle");
 const gazeToggle = $("#gaze-toggle");
+const dotModeToggle = $("#dot-mode-toggle");
+const dotContext = $("#dot-context");
+const conversationActive = $("#conversation-active");
+const motionToggle = $("#motion-toggle");
 const hostCanvas = $("#host-canvas");
 const oldCanvas = $("#old-canvas");
 const hostContext = hostCanvas.getContext("2d", { alpha: true });
@@ -31,6 +36,9 @@ let hostClock = new PlaybackClock({ state: "idle", profile: "hostDot", now: perf
 let oldClock = new PlaybackClock({ state: "idle", profile: "oldPreview", now: performance.now() });
 let lastPointerAngle = null;
 let pointerInside = false;
+let dotController = null;
+let simulatedHidden = false;
+let gazeRequested = false;
 const playbackScheduler = new PlaybackScheduler({
   getClocks: () => [hostClock, oldClock],
   now: () => performance.now(),
@@ -38,6 +46,59 @@ const playbackScheduler = new PlaybackScheduler({
   clearTimeoutFn: (timer) => window.clearTimeout(timer),
   onFrame: (now) => updateControls(now),
 });
+
+function reschedulePlayback() {
+  if (dotController) dotController.reschedule();
+  else playbackScheduler.schedule();
+}
+
+function dotContextValue() {
+  return { identity: dotContext.value === "draft" ? "draft" : "identified", conversationStatus: dotContext.value, conversationActive: conversationActive.checked };
+}
+
+function createDotPlayback(now, shouldRun = true) {
+  playbackScheduler.cancel();
+  dotController?.destroy();
+  dotController = null;
+  loopToggle.checked = true;
+  dotController = createDotModeController({
+    now: () => performance.now(),
+    setTimeoutFn: (callback, delay) => window.setTimeout(callback, delay),
+    clearTimeoutFn: (timer) => window.clearTimeout(timer),
+    atlasRows: atlasFormat?.rows ?? 11,
+    initialContext: dotContextValue(),
+    motionEnabled: motionToggle.checked,
+    getAdditionalClocks: () => oldClock ? [oldClock] : [],
+    onFrame: (_snapshot, _reason, timestamp) => { if (dotController) updateControls(timestamp); },
+  });
+  hostClock = dotController.clock;
+  if (!shouldRun && motionToggle.checked) hostClock.pause(now);
+  if (!shouldRun || !motionToggle.checked) oldClock?.pause(now);
+  if (simulatedHidden) dotController.setDocumentHidden(true);
+  reschedulePlayback();
+}
+
+function applyDotContext() {
+  const now = performance.now();
+  const state = resolveDotState(dotContextValue());
+  if (!dotController) {
+    oldClock = state === "idle" ? new PlaybackClock({ state: "idle", profile: "oldPreview", now }) : null;
+    createDotPlayback(now);
+  } else {
+    if (hostClock.state !== state) {
+      gazeToggle.checked = false;
+      oldClock = state === "idle" ? new PlaybackClock({ state: "idle", profile: "oldPreview", now }) : null;
+      if (!motionToggle.checked) oldClock?.pause(now);
+    }
+    dotController.setContext(dotContextValue());
+    hostClock = dotController.clock;
+  }
+  stateSelect.value = state;
+  updateGazeAvailability();
+  updateStateLabels(state);
+  updateControls(now);
+  reschedulePlayback();
+}
 
 function seconds(ms) {
   return `${(ms / 1000).toFixed(2)} s`;
@@ -101,12 +162,24 @@ function updateControls(now = performance.now()) {
 
   $("#play-button").textContent = host.gaze ? "视线覆盖中" : host.running ? "暂停" : "继续";
   if (host.completed) $("#play-button").textContent = "重播";
-  $("#play-button").disabled = Boolean(host.gaze);
-  $("#previous-button").disabled = Boolean(host.gaze);
-  $("#next-button").disabled = Boolean(host.gaze);
-  $("#reset-button").disabled = Boolean(host.gaze);
   $("#clear-gaze-button").disabled = !gazeToggle.checked;
-  loopToggle.disabled = Boolean(host.gaze);
+  loopToggle.disabled = Boolean(host.gaze) || Boolean(dotController);
+  const staticMode = dotController && !motionToggle.checked;
+  for (const id of ["play-button", "previous-button", "next-button", "reset-button"]) $("#" + id).disabled = Boolean(host.gaze) || Boolean(staticMode);
+  if (staticMode) $("#play-button").textContent = "静态首帧";
+  dotContext.disabled = !dotModeToggle.checked;
+  conversationActive.disabled = !dotModeToggle.checked;
+  motionToggle.disabled = !dotModeToggle.checked;
+  $("#blur-button").disabled = !dotModeToggle.checked;
+  $("#hidden-button").disabled = !dotModeToggle.checked;
+  $("#hidden-button").textContent = simulatedHidden ? "返回可见页面" : "模拟隐藏页面";
+  const modeSnapshot = dotController?.snapshot();
+  $("#dot-mode-status").textContent = !modeSnapshot ? "手动动作预览；会话状态与 10 秒注视规则未启用。"
+    : !modeSnapshot.motionEnabled ? "动效关闭：显示当前状态首帧。"
+    : modeSnapshot.gazeLeaseActive ? "注视有效期内：移出头像仍可更新方向，到期后恢复待机。"
+    : modeSnapshot.pointerInside ? "注视已结束；先移出头像再移入可重新触发。"
+    : simulatedHidden ? "已模拟隐藏取消注视；计时未暂停，真实后台节流需实机验证。"
+    : "Dot 状态模型：空闲待机，思考工作；进入头像后注视约 10 秒。";
   if (gazeToggle.checked) {
     $("#gaze-status").textContent = host.gaze
       ? `视线 ${host.gaze.angle}° · 覆盖动画`
@@ -117,15 +190,17 @@ function updateControls(now = performance.now()) {
 }
 
 function updateGazeAvailability() {
-  const available = canUseGaze(hostClock.state, atlasFormat?.rows);
+  const available = canUseGaze(hostClock.state, atlasFormat?.rows) && (!dotController || motionToggle.checked);
   if (!available) {
     gazeToggle.checked = false;
     if (hostClock.gaze) hostClock.clearGaze(performance.now());
   }
+  if (dotController) gazeToggle.checked = available && gazeRequested;
   gazeToggle.disabled = !available;
 }
 
 function stopGazeTracking(now) {
+  if (dotController) dotController.cancelPointer({ resetInside: true });
   if (hostClock.gaze) hostClock.clearGaze(now);
   else if (hostClock.state === "idle") hostClock.restart(now, hostClock.running);
 }
@@ -158,31 +233,45 @@ function applyPointerGaze(angle, now = performance.now()) {
   if (!gazeToggle.checked || !atlasFormat || !canUseGaze(hostClock.state, atlasFormat.rows)) return;
   try {
     const cell = getGazeCell(angle, atlasFormat.rows);
-    hostClock.setGaze(angle, atlasFormat.rows, now);
+    if (dotController) dotController.pointerMove({ angle, inInteractionPath: true, insideBounds: true });
+    else hostClock.setGaze(angle, atlasFormat.rows, now);
     lastPointerAngle = cell.angle;
     updateControls(now);
-    playbackScheduler.schedule();
+    reschedulePlayback();
   } catch (error) {
     gazeToggle.checked = false;
     hostClock.clearGaze(now);
     showFileStatus(error.message, "error");
     updateControls(now);
-    playbackScheduler.schedule();
+    reschedulePlayback();
   }
 }
 
 function setState(state) {
+  if (dotModeToggle.checked && ["idle", "work"].includes(state)) {
+    dotContext.value = state === "work" ? "working" : "idle";
+    applyDotContext();
+    return;
+  }
+  if (dotController) {
+    dotController.destroy();
+    dotController = null;
+    dotModeToggle.checked = false;
+    simulatedHidden = false;
+  }
   const now = performance.now();
+  gazeRequested = false;
   gazeToggle.checked = false;
   hostClock = new PlaybackClock({ state, profile: "hostDot", now, loop: loopToggle.checked });
   oldClock = state === "idle" ? new PlaybackClock({ state: "idle", profile: "oldPreview", now, loop: loopToggle.checked }) : null;
   updateGazeAvailability();
   updateStateLabels(state);
   updateControls(now);
-  playbackScheduler.schedule();
+  reschedulePlayback();
 }
 
 function onPointerMove(event) {
+  if (dotController) return;
   pointerInside = true;
   const bounds = $("#host-stage").getBoundingClientRect();
   lastPointerAngle = pointerAngleDegrees(event.clientX, event.clientY, bounds);
@@ -190,10 +279,11 @@ function onPointerMove(event) {
 }
 
 function onPointerLeave() {
+  if (dotController) return;
   pointerInside = false;
   if (hostClock?.gaze) hostClock.clearGaze(performance.now());
   updateControls();
-  playbackScheduler.schedule();
+  reschedulePlayback();
 }
 
 async function loadAtlas(file, generation) {
@@ -224,13 +314,15 @@ async function loadAtlas(file, generation) {
     if (atlasBitmap) atlasBitmap.close();
     atlasBitmap = bitmap;
     atlasFormat = format;
+    pointerInside = false;
     gazeToggle.checked = false;
-    hostClock.restart(now, hostShouldRun);
     oldClock?.restart(now, oldShouldRun);
+    if (dotModeToggle.checked) createDotPlayback(now, hostShouldRun);
+    else hostClock.restart(now, hostShouldRun);
     updateGazeAvailability();
     showFileStatus(`已载入 ${format.version} 图集 · ${bitmap.width} × ${bitmap.height} · ${format.rows} 行；图像仅保留在当前页面内存中。播放从当前状态首帧开始。`, "success");
     updateControls(now);
-    playbackScheduler.schedule();
+    reschedulePlayback();
   } catch (error) {
     bitmap?.close();
     if (atlasLoadGeneration.isCurrent(generation)) {
@@ -258,28 +350,28 @@ $("#play-button").addEventListener("click", () => {
     oldClock?.resume(now);
   }
   updateControls(now);
-  playbackScheduler.schedule();
+  reschedulePlayback();
 });
 $("#previous-button").addEventListener("click", () => {
   const now = performance.now();
   oldClock?.step(-1, now);
   hostClock.step(-1, now);
   updateControls(now);
-  playbackScheduler.schedule();
+  reschedulePlayback();
 });
 $("#next-button").addEventListener("click", () => {
   const now = performance.now();
   oldClock?.step(1, now);
   hostClock.step(1, now);
   updateControls(now);
-  playbackScheduler.schedule();
+  reschedulePlayback();
 });
 $("#reset-button").addEventListener("click", () => {
   const now = performance.now();
   hostClock.reset(now);
   oldClock?.reset(now);
   updateControls(now);
-  playbackScheduler.schedule();
+  reschedulePlayback();
 });
 loopToggle.addEventListener("change", () => {
   const now = performance.now();
@@ -287,7 +379,7 @@ loopToggle.addEventListener("change", () => {
   oldClock?.setLoop(loopToggle.checked, now);
   updateStateLabels(stateSelect.value);
   updateControls(now);
-  playbackScheduler.schedule();
+  reschedulePlayback();
 });
 pixelToggle.addEventListener("change", () => {
   $("#host-stage").classList.toggle("smooth", !pixelToggle.checked);
@@ -299,6 +391,7 @@ $("#size-select").addEventListener("change", (event) => {
 });
 gazeToggle.addEventListener("change", () => {
   const now = performance.now();
+  gazeRequested = gazeToggle.checked;
   if (gazeToggle.checked) {
     if (!atlasFormat || !canUseGaze(hostClock.state, atlasFormat.rows)) {
       gazeToggle.checked = false;
@@ -317,33 +410,83 @@ gazeToggle.addEventListener("change", () => {
     showFileStatus(atlasFormat ? `${atlasFormat.version} 图集已载入；视线覆盖结束，待机从首帧重新开始。` : "尚未载入图集。预览器不会保存或上传所选文件。", atlasFormat ? "success" : "");
   }
   updateControls(now);
-  playbackScheduler.schedule();
+  reschedulePlayback();
 });
 $("#clear-gaze-button").addEventListener("click", () => {
   const now = performance.now();
+  gazeRequested = false;
   gazeToggle.checked = false;
   stopGazeTracking(now);
   updateControls(now);
-  playbackScheduler.schedule();
+  reschedulePlayback();
 });
 $("#idle-button").addEventListener("click", () => {
+  gazeRequested = false;
   gazeToggle.checked = false;
   stateSelect.value = "idle";
   loopToggle.checked = true;
   setState("idle");
+  dotController?.cancelPointer({ resetInside: true });
+  const now = performance.now();
+  const running = !dotController || motionToggle.checked;
+  hostClock.restart(now, running);
+  oldClock?.restart(now, running);
+  updateControls(now);
+  reschedulePlayback();
 });
 $("#host-stage").addEventListener("pointermove", onPointerMove);
 $("#host-stage").addEventListener("pointerenter", () => { pointerInside = true; });
 $("#host-stage").addEventListener("pointerleave", onPointerLeave);
+dotModeToggle.addEventListener("change", () => {
+  gazeRequested = false;
+  gazeToggle.checked = false;
+  pointerInside = false;
+  if (dotModeToggle.checked) {
+    if (!["idle", "work"].includes(hostClock.state)) dotContext.value = "idle";
+    applyDotContext();
+  } else setState(hostClock.state);
+});
+dotContext.addEventListener("change", applyDotContext);
+conversationActive.addEventListener("change", applyDotContext);
+motionToggle.addEventListener("change", () => {
+  if (!dotController) return;
+  const now = performance.now();
+  dotController.setMotionEnabled(motionToggle.checked);
+  oldClock?.restart(now, motionToggle.checked);
+  updateGazeAvailability();
+  updateControls(now);
+  reschedulePlayback();
+});
+window.addEventListener("pointermove", (event) => {
+  if (!dotController || !atlasFormat || simulatedHidden) return;
+  const stage = $("#host-stage");
+  const bounds = stage.getBoundingClientRect();
+  const inPath = event.composedPath().includes(stage);
+  const inside = event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+  pointerInside = inPath && inside;
+  lastPointerAngle = pointerAngleDegrees(event.clientX, event.clientY, bounds);
+  if (gazeToggle.checked) dotController.pointerMove({ angle: lastPointerAngle, inInteractionPath: inPath, insideBounds: inside, pointerType: event.pointerType, isPrimary: event.isPrimary });
+}, true);
+window.addEventListener("pointercancel", () => dotController?.cancelPointer());
+window.addEventListener("blur", () => dotController?.blur());
+document.addEventListener("visibilitychange", () => dotController?.setDocumentHidden(document.hidden));
+$("#blur-button").addEventListener("click", () => { dotController?.blur(); updateControls(); });
+$("#hidden-button").addEventListener("click", () => {
+  simulatedHidden = !simulatedHidden;
+  dotController?.setDocumentHidden(simulatedHidden);
+  updateControls();
+});
 window.addEventListener("beforeunload", () => {
   playbackScheduler.cancel();
+  dotController?.destroy();
   atlasBitmap?.close();
 }, { once: true });
 
+if (dotModeToggle.checked) applyDotContext();
 updateGazeAvailability();
 updateStateLabels("idle");
 updateControls();
-playbackScheduler.schedule();
+reschedulePlayback();
 function animate(now) {
   updateControls(now);
   requestAnimationFrame(animate);
