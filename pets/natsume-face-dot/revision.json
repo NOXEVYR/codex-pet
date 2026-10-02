@@ -1,16 +1,17 @@
 {
-  "artworkRevision": "2026-10-02-work-expression-02",
+  "artworkRevision": "2026-10-02-idle-expression-03",
   "status": "debug",
   "spriteVersionNumber": 2,
   "width": 1536,
   "height": 2288,
-  "encodedBytes": 2739714,
-  "sha256": "97ffec59aeab2288a88f27abc7f619de2571b5e4286c17a19896bf31b8bf040d",
+  "encodedBytes": 2740570,
+  "sha256": "fa6a47edddffc172ebf284cf1fbca27307725485b2c045d829e2f20a3b84c3be",
   "previousLocalRevision": {
-    "artworkRevision": "2026-10-02-awake-breathing-01",
-    "sha256": "5fb8f25a57540be78224866ae6d711136259138039bc8098d681f6304baad5ec"
+    "artworkRevision": "2026-10-02-work-expression-02",
+    "sha256": "97ffec59aeab2288a88f27abc7f619de2571b5e4286c17a19896bf31b8bf040d"
   },
-  "changedRowsThisRevision": [7],
+  "changedRowsThisRevision": [0],
+  "changedCellsThisRevision": "row 0 columns 0-5 only",
   "cumulativeChangedRowsAcrossRounds": [0, 7],
   "idleFrameDurationsMs": [1680, 660, 660, 840, 840, 1920],
   "idleCycleMs": 6600,
@@ -29,6 +30,7 @@
     "inlineUiScenarioTests": 12,
     "virtualScenarioAssertions": 33,
     "simulatedDurationHours": 8,
+    "modelVerificationScope": "inherited from unchanged preview code; not rerun for this artwork-only revision",
     "realEightHourRun": false,
     "hostFpsChanged": false,
     "cloudSync": "verified-content-and-selection",
@@ -40,10 +42,24 @@
       "actualDotLongSession": "not-verified",
       "nativeUiPlayback": "not-verified"
     },
+    "roundThreeCloudVerification": {
+      "sameExistingEntry": true,
+      "redownloadedCloudPng": {
+        "sha256": "a15ce902dfaa449aab530ea6434c3f2ad5a7d1b69f4c167b6130c7e3e281ebe3",
+        "bytes": 3747654
+      },
+      "decodedRgbaSha256": "bbb1dc74087cf17ba551cef5293ac63adc5f9ec37d5da5c753c05898eb3ec8bc",
+      "cloudPngMatchesCandidatePublicNativeAndCanonicalDecodedRgba": true,
+      "freshBrowserSelectionUnchanged": true,
+      "originalDotWorkSelectionChangedByThisRevision": false,
+      "actualDotLongSession": "not-verified",
+      "realDotEndToEnd": "not-verified",
+      "realEightHourRun": false
+    },
     "realDotEndToEnd": "not-verified"
   },
   "nextIteration": [
-    "idle shallow-smile / curiosity variation",
-    "gaze transition around 067.5 to 090 degrees"
+    "verify actual conversation interactions: gaze entry and expiry, blur/hidden cancellation and recovery, idle-work transitions, delayed callbacks",
+    "consider native or long-duration playback checks after interaction boundaries"
   ]
 }
