@@ -179,7 +179,7 @@ function updateControls(now = performance.now()) {
     : modeSnapshot.gazeLeaseActive ? "注视有效期内：移出头像仍可更新方向，到期后恢复待机。"
     : modeSnapshot.pointerInside ? "注视已结束；先移出头像再移入可重新触发。"
     : simulatedHidden ? "已模拟隐藏取消注视；计时未暂停，真实后台节流需实机验证。"
-    : "Dot 状态模型：空闲待机，思考工作；进入头像后注视约 10 秒。";
+    : "网页 Dot 模型：空闲待机，思考工作；注视约 10 秒。悬浮宠物的实际规则需单独核验。";
   if (gazeToggle.checked) {
     $("#gaze-status").textContent = host.gaze
       ? `视线 ${host.gaze.angle}° · 覆盖动画`

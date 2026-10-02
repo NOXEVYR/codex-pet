@@ -168,7 +168,7 @@
         <h2 id="controls-heading">预览设置</h2>
         <p>保持 Dot 的帧格和宿主节奏，方便定位逐帧停留、循环长度与视线覆盖。</p>
 
-        <div class="options"><label><input id="dot-mode-toggle" type="checkbox" checked> Dot 交互模式</label></div>
+        <div class="options"><label><input id="dot-mode-toggle" type="checkbox" checked> 网页 Dot 交互模型</label></div>
         <div class="field">
           <label for="dot-context">会话状态</label>
           <select id="dot-context"><option value="idle">空闲</option><option value="working">正在思考</option><option value="sleeping">任务暂歇</option><option value="draft">未建立会话</option></select>
@@ -215,7 +215,7 @@
             <li>角色框尺寸是方形，完整帧按比例缩放并居中。</li>
           </ul>
         </div>
-        <p class="footnote">Dot 模式进入头像后建立约 10 秒注视有效期，移出不会立即结束；失焦、隐藏或取消跟随会清除注视。结束后重启待机首帧，完整停留 1680 ms。暂停和逐帧是预览检查操作；手动动作模式另支持单次播放。此工具不改变真实 Dot、图集或浏览器存储。</p>
+        <p class="footnote">本模型对应已检查的网页 Dot 组件：进入头像后建立约 10 秒注视有效期，移出不会立即结束；失焦、隐藏或取消跟随会清除注视。结束后重启待机首帧，完整停留 1680 ms。Settings → Pets 悬浮宠物可能采用另一套注视来源，须在实际入口核验。暂停和逐帧是预览检查操作；手动动作模式另支持单次播放。此工具不改变真实 Dot、图集或浏览器存储。</p>
       </aside>
     </div>
   </main>
@@ -950,7 +950,7 @@ function updateControls(now = performance.now()) {
     : modeSnapshot.gazeLeaseActive ? "注视有效期内：移出头像仍可更新方向，到期后恢复待机。"
     : modeSnapshot.pointerInside ? "注视已结束；先移出头像再移入可重新触发。"
     : simulatedHidden ? "已模拟隐藏取消注视；计时未暂停，真实后台节流需实机验证。"
-    : "Dot 状态模型：空闲待机，思考工作；进入头像后注视约 10 秒。";
+    : "网页 Dot 模型：空闲待机，思考工作；注视约 10 秒。悬浮宠物的实际规则需单独核验。";
   if (gazeToggle.checked) {
     $("#gaze-status").textContent = host.gaze
       ? `视线 ${host.gaze.angle}° · 覆盖动画`
