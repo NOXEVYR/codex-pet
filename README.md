@@ -43,6 +43,10 @@ Windows / .NET Framework 4.x。解压后打开 `NatsumePet/NatsumePet.exe`；EXE
 
 标准 Q 版女仆额外支持坐下、打盹、拎起、拖动及落地动作。当前采用独立贴图和整体变换动画，尚非骨骼或逐帧动画。
 
+## Dot 脸部动画调试
+
+Dot 的脸部动画与 Windows 桌宠程序使用不同的素材和播放方式。当前正在按宿主的实际慢速待机节奏迭代，尚未作为正式版本发布。[睁眼呼吸调试素材](pets/natsume-face-dot/README.md) 包含图集和正常节奏预览；[本地节奏预览工具](tools/dot-pet-preview/README.md) 可检查自己的图集；[调试与验收说明](docs/DOT-ANIMATION-DEBUG.md) 记录播放限制和检查方法；[持续迭代记录](docs/DOT-ITERATION-PLAN.md) 跟踪表情与 Dot 模式适配。
+
 ## 从源码构建
 
 C# 5 + WinForms + GDI+，无第三方程序包，使用 Windows 自带 .NET Framework 编译器。
