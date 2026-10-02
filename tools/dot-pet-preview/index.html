@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' blob:; connect-src 'none'; font-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Dot 宠物图集预览</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+      color: #263544;
+      background: #f2f5f7;
+      font-synthesis: none;
+      --ink: #263544;
+      --muted: #73808b;
+      --line: #e2e8ec;
+      --blue: #286c84;
+      --blue-light: #eaf4f6;
+      --white: #fff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    button, input, select { font: inherit; }
+    button, select, .file-button { min-height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--ink); }
+    button, .file-button { padding: 0 14px; cursor: pointer; }
+    button:hover, select:hover, .file-button:hover { border-color: #a9c6d0; }
+    button:focus-visible, select:focus-visible, input:focus-visible + .switch-track, .file-button:focus-within { outline: 3px solid #91c4d2; outline-offset: 2px; }
+    button:disabled { cursor: default; opacity: .5; }
+    .page { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 48px; }
+    .topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 26px; }
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: #dcecf0; color: var(--blue); font-size: 18px; font-weight: 700; }
+    .eyebrow { margin: 0 0 3px; color: var(--muted); font-size: 12px; letter-spacing: .08em; }
+    h1 { margin: 0; font-size: 21px; font-weight: 650; letter-spacing: -.02em; }
+    .offline-pill { border: 1px solid #dce8e5; border-radius: 999px; padding: 7px 11px; color: #426e64; background: #f2f8f5; font-size: 12px; white-space: nowrap; }
+    .card { border: 1px solid var(--line); border-radius: 18px; background: var(--white); box-shadow: 0 8px 26px #26354408; }
+    .loadbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 20px; }
+    .loadcopy { min-width: 0; }
+    .loadcopy strong { display: block; margin-bottom: 4px; font-size: 14px; }
+    .loadcopy span { display: block; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .file-button { flex: none; display: inline-flex; align-items: center; gap: 9px; border-color: #c9dce2; color: #205c73; background: #f5fafb; font-weight: 600; }
+    .file-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .file-status { min-height: 38px; padding: 9px 2px 0; color: var(--muted); font-size: 12px; }
+    .file-status[data-kind="error"] { color: #a34d40; }
+    .file-status[data-kind="success"] { color: #3f7866; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .9fr); align-items: start; gap: 18px; margin-top: 6px; }
+    .stage-card { padding: 21px; }
+    .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .section-head h2 { margin: 0 0 4px; font-size: 15px; font-weight: 650; }
+    .section-head p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .tag { flex: none; border-radius: 999px; padding: 5px 9px; background: var(--blue-light); color: var(--blue); font-size: 11px; }
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .preview-panel { min-width: 0; border: 1px solid var(--line); border-radius: 14px; padding: 15px; background: #fcfdfd; }
+    .preview-panel h3 { margin: 0 0 3px; font-size: 13px; font-weight: 650; }
+    .preview-panel .panel-subtitle { min-height: 32px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .pet-stage { display: grid; place-items: center; width: var(--preview-size, 64px); height: var(--preview-size, 64px); max-width: 100%; margin: 13px auto 12px; overflow: hidden; outline: 1px solid #dce3e6; outline-offset: 1px; border-radius: 8px; background-color: #fff; background-image: linear-gradient(45deg, #f0f3f4 25%, transparent 25%), linear-gradient(-45deg, #f0f3f4 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f3f4 75%), linear-gradient(-45deg, transparent 75%, #f0f3f4 75%); background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0; touch-action: none; }
+    .pet-stage canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+    .pet-stage.smooth canvas { image-rendering: auto; }
+    .frame-readout { min-height: 49px; color: var(--muted); font-size: 11px; line-height: 1.55; text-align: center; font-variant-numeric: tabular-nums; }
+    .frame-readout strong { color: var(--ink); font-weight: 600; }
+    .placeholder { display: none; place-items: center; width: var(--preview-size, 64px); height: var(--preview-size, 64px); max-width: 100%; margin: 13px auto 12px; border: 1px dashed #ccd6db; border-radius: 8px; color: #88959d; background: #fafcfc; text-align: center; font-size: 11px; line-height: 1.45; padding: 7px; }
+    .preview-panel.inactive .pet-stage, .preview-panel.inactive .frame-readout { display: none; }
+    .preview-panel.inactive .placeholder { display: grid; }
+    .timing-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 16px; border-top: 1px solid var(--line); margin-top: 15px; padding-top: 14px; color: var(--muted); font-size: 11px; }
+    .timing-strip strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .gaze-strip { min-height: 18px; color: var(--blue); font-variant-numeric: tabular-nums; }
+    .controls { margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--line); }
+    .control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .control-row button { min-height: 37px; padding: 0 12px; font-size: 12px; }
+    button.primary { border-color: var(--blue); color: #fff; background: var(--blue); }
+    button.primary:hover { border-color: #1f586d; background: #1f586d; }
+    .options { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 14px; color: #596771; font-size: 12px; }
+    .options label { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+    .options input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--blue); }
+    .option-select { display: inline-flex; align-items: center; gap: 7px; }
+    .option-select select { min-height: 32px; padding: 0 25px 0 9px; font-size: 12px; }
+    .side-card { padding: 20px; }
+    .side-card h2 { margin: 0 0 5px; font-size: 15px; }
+    .side-card > p { margin: 0 0 17px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .field { display: grid; gap: 7px; margin: 14px 0; }
+    .field label { color: #596771; font-size: 12px; }
+    .field select { width: 100%; padding: 0 11px; }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .switch-copy strong { display: block; margin-bottom: 3px; font-size: 12px; }
+    .switch-copy span { display: block; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .switch { position: relative; flex: none; display: inline-flex; width: 40px; height: 24px; }
+    .switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .switch-track { width: 40px; height: 24px; border-radius: 999px; background: #d8e0e4; cursor: pointer; transition: background .15s; }
+    .switch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #26354433; transition: transform .15s; }
+    .switch input:checked + .switch-track { background: var(--blue); }
+    .switch input:checked + .switch-track::after { transform: translateX(16px); }
+    .switch input:disabled + .switch-track { cursor: not-allowed; opacity: .55; }
+    .side-action { width: 100%; margin-top: 5px; }
+    .help { margin-top: 18px; padding: 13px 14px; border-radius: 12px; color: #52646e; background: #f4f8f9; font-size: 11px; line-height: 1.65; }
+    .help strong { color: var(--ink); }
+    .help ul { margin: 7px 0 0; padding-left: 17px; }
+    .footnote { margin: 15px 2px 0; color: #89959d; font-size: 11px; line-height: 1.55; }
+    @media (max-width: 830px) { .workspace { grid-template-columns: 1fr; } .page { width: min(720px, calc(100% - 28px)); padding-top: 22px; } }
+    @media (max-width: 560px) { .topline { align-items: flex-start; } .offline-pill { font-size: 10px; } .loadbar { align-items: flex-start; flex-direction: column; } .stage-card { padding: 16px 12px; } .preview-panel { padding: 12px; } .compare { grid-template-columns: 1fr; gap: 8px; } .preview-panel .panel-subtitle { font-size: 10px; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topline">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">D</div>
+        <div><p class="eyebrow">LOCAL SPRITE DEBUGGER</p><h1>Dot 宠物图集预览</h1></div>
+      </div>
+      <span class="offline-pill">离线 · 文件只在本机内存中读取</span>
+    </header>
+
+    <section class="card loadbar" aria-label="载入图集">
+      <div class="loadcopy">
+        <strong>载入本地 Sprite Sheet</strong>
+        <span>支持 PNG / WebP · 1536 × 1872（v1）或 1536 × 2288（v2）</span>
+      </div>
+      <label class="file-button">选择图集<input id="atlas-file" type="file" accept="image/png,image/webp,.png,.webp"></label>
+    </section>
+    <div id="file-status" class="file-status" role="status" aria-live="polite">尚未载入图集。预览器不会保存或上传所选文件。</div>
+
+    <div class="workspace">
+      <section class="card stage-card" aria-labelledby="preview-heading">
+        <div class="section-head">
+          <div><h2 id="preview-heading">逐帧与时序对照</h2><p id="state-description">待机循环 · Dot 主模式</p></div>
+          <span id="state-tag" class="tag">6 帧循环</span>
+        </div>
+
+        <div class="compare">
+          <article id="host-panel" class="preview-panel">
+            <h3 id="host-title">Dot host · 待机</h3>
+            <p id="host-subtitle" class="panel-subtitle">宿主节奏 · 逐帧显示原始 192 × 208 单元格</p>
+            <div id="host-stage" class="pet-stage" aria-label="Dot 宿主节奏预览"><canvas id="host-canvas" width="192" height="208"></canvas></div>
+            <div id="host-readout" class="frame-readout">请先载入图集</div>
+          </article>
+          <article id="old-panel" class="preview-panel">
+            <h3>旧预览 · 待机</h3>
+            <p class="panel-subtitle">旧预览待机节奏 · 6.0× 快于宿主</p>
+            <div id="old-stage" class="pet-stage" aria-label="旧预览节奏"><canvas id="old-canvas" width="192" height="208"></canvas></div>
+            <div class="placeholder">没有旧版<br>时序参考</div>
+            <div id="old-readout" class="frame-readout">请先载入图集</div>
+          </article>
+        </div>
+
+        <div class="timing-strip" aria-live="polite">
+          <span>宿主一轮 <strong id="host-cycle">6.60 s</strong></span>
+          <span>旧预览一轮 <strong id="old-cycle">1.10 s</strong></span>
+          <span>差异 <strong>6.0×</strong></span>
+          <span id="gaze-status" class="gaze-strip">指针跟随关闭</span>
+        </div>
+
+        <div class="controls">
+          <div class="control-row">
+            <button id="play-button" class="primary" type="button">暂停</button>
+            <button id="previous-button" type="button" aria-label="上一帧">← 上一帧</button>
+            <button id="next-button" type="button" aria-label="下一帧">下一帧 →</button>
+            <button id="reset-button" type="button">重置帧序</button>
+          </div>
+          <div class="options">
+            <label><input id="loop-toggle" type="checkbox" checked> 循环播放</label>
+            <label><input id="pixel-toggle" type="checkbox" checked> 像素化缩放</label>
+            <span class="option-select"><label for="size-select">角色框</label><select id="size-select"><option value="20">20 px</option><option value="64" selected>64 px</option><option value="128">128 px</option><option value="192">192 px</option></select></span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card side-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading">预览设置</h2>
+        <p>保持 Dot 的帧格和宿主节奏，方便定位逐帧停留、循环长度与视线覆盖。</p>
+
+        <div class="field">
+          <label for="state-select">播放状态</label>
+          <select id="state-select">
+            <optgroup label="Dot 主模式">
+              <option value="idle" selected>待机 · 6 帧</option>
+              <option value="work">工作中 · 6 帧循环</option>
+            </optgroup>
+            <optgroup label="桌面端扩展动作 · 手动预览">
+              <option value="right">向右 · 8 帧</option>
+              <option value="left">向左 · 8 帧</option>
+              <option value="waving">挥手 · 4 帧</option>
+              <option value="jump">跳跃 · 5 帧</option>
+              <option value="failed">失败 · 8 帧</option>
+              <option value="waiting">等待 · 6 帧</option>
+              <option value="review">审阅 · 6 帧</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="switch-row">
+          <div class="switch-copy"><strong>指针视线跟随</strong><span>仅待机与 v2 可用；以角色框中心为原点，方向变化直接切格。</span></div>
+          <label class="switch" aria-label="开启指针视线跟随"><input id="gaze-toggle" type="checkbox" disabled><span class="switch-track"></span></label>
+        </div>
+        <button id="clear-gaze-button" class="side-action" type="button" disabled>停止跟随并重启待机</button>
+        <button id="idle-button" class="side-action" type="button">回到待机首帧</button>
+
+        <div class="help">
+          <strong>帧格坐标从 0 开始</strong>
+          <ul>
+            <li>每格 192 × 208；v1 共 9 行，v2 共 11 行。</li>
+            <li>待机和工作中属于 Dot 主模式；其余动作是桌面端扩展预览。</li>
+            <li>v2 第 9、10 行提供 16 个静态视线方向，仅待机可用；v1 不含视线格。</li>
+            <li>角色框尺寸是方形，完整帧按比例缩放并居中。</li>
+          </ul>
+        </div>
+        <p class="footnote">结束视线覆盖会重启待机首帧并完整停留 1680 ms；调试器手动暂停会保留暂停状态。单次播放结束后，“继续”从首帧重播；切换循环选项会重置到当前状态首帧。此工具不编辑图集像素，也不写入文件或浏览器存储。</p>
+      </aside>
+    </div>
+  </main>
+  <!-- PREVIEW-APP-START -->
+  <script>
+(() => {
+  (() => {
+const CELL_WIDTH = 192;
+const CELL_HEIGHT = 208;
+const ATLAS_COLUMNS = 8;
+
+const ATLAS_FORMATS = Object.freeze([
+  Object.freeze({ version: "v1", width: 1536, height: 1872, rows: 9 }),
+  Object.freeze({ version: "v2", width: 1536, height: 2288, rows: 11 }),
+]);
+
+const HOST_IDLE_MS = Object.freeze([1680, 660, 660, 840, 840, 1920]);
+const OLD_PREVIEW_IDLE_MS = Object.freeze([280, 110, 110, 140, 140, 320]);
+
+// Rows and frame counts follow the Dot-compatible sprite sheet layout.
+const SEQUENCES = Object.freeze({
+  idle: Object.freeze({ label: "待机", row: 0, durations: HOST_IDLE_MS, loop: true, dot: true }),
+  right: Object.freeze({ label: "向右", row: 1, durations: Object.freeze([120, 120, 120, 120, 120, 120, 120, 220]), loop: true, dot: false }),
+  left: Object.freeze({ label: "向左", row: 2, durations: Object.freeze([120, 120, 120, 120, 120, 120, 120, 220]), loop: true, dot: false }),
+  waving: Object.freeze({ label: "挥手", row: 3, durations: Object.freeze([140, 140, 140, 280]), loop: true, dot: false }),
+  jump: Object.freeze({ label: "跳跃", row: 4, durations: Object.freeze([140, 140, 140, 140, 280]), loop: true, dot: false }),
+  failed: Object.freeze({ label: "失败", row: 5, durations: Object.freeze([140, 140, 140, 140, 140, 140, 140, 240]), loop: true, dot: false }),
+  waiting: Object.freeze({ label: "等待", row: 6, durations: Object.freeze([150, 150, 150, 150, 150, 260]), loop: true, dot: false }),
+  work: Object.freeze({ label: "工作中", row: 7, durations: Object.freeze([120, 120, 120, 120, 120, 220]), loop: true, dot: true }),
+  review: Object.freeze({ label: "审阅", row: 8, durations: Object.freeze([150, 150, 150, 150, 150, 280]), loop: true, dot: false }),
+});
+
+const GAZE_ANGLES = Object.freeze(Array.from({ length: 16 }, (_, index) => index * 22.5));
+
+function validateAtlasDimensions(width, height) {
+  const format = ATLAS_FORMATS.find((candidate) => candidate.width === width && candidate.height === height);
+  if (!format) {
+    throw new RangeError(`图集尺寸必须是 1536×1872（v1）或 1536×2288（v2）；当前为 ${width}×${height}。`);
+  }
+  return format;
+}
+
+function getSequence(state) {
+  const sequence = SEQUENCES[state];
+  if (!sequence) throw new RangeError(`未知动画状态：${state}`);
+  return sequence;
+}
+
+function getDurations(state, profile = "hostDot") {
+  const sequence = getSequence(state);
+  if (profile === "hostDot") return sequence.durations;
+  if (profile === "oldPreview" && state === "idle") return OLD_PREVIEW_IDLE_MS;
+  throw new RangeError(`没有 ${state} 的 ${profile} 时序参考。`);
+}
+
+function sequenceDuration(state, profile = "hostDot") {
+  return getDurations(state, profile).reduce((sum, duration) => sum + duration, 0);
+}
+
+function getFrameCell(state, frameIndex, atlasRows) {
+  const sequence = getSequence(state);
+  if (!Number.isInteger(atlasRows) || atlasRows < 1) throw new RangeError("图集行数无效。");
+  if (sequence.row >= atlasRows) throw new RangeError(`${sequence.label} 需要第 ${sequence.row} 行；当前图集只有 ${atlasRows} 行。`);
+  if (!Number.isInteger(frameIndex) || frameIndex < 0 || frameIndex >= sequence.durations.length) {
+    throw new RangeError(`${sequence.label} 的帧号必须在 0 到 ${sequence.durations.length - 1} 之间。`);
+  }
+  return Object.freeze({ row: sequence.row, column: frameIndex, x: frameIndex * CELL_WIDTH, y: sequence.row * CELL_HEIGHT });
+}
+
+function getGazeCell(angleDegrees, atlasRows) {
+  if (atlasRows < 11) throw new RangeError("视线方向格需要 v2 图集的第 9、10 行。");
+  if (!Number.isFinite(angleDegrees)) throw new TypeError("方向角必须是有限数字。");
+  const normalized = ((angleDegrees % 360) + 360) % 360;
+  const directionIndex = Math.round(normalized / 22.5) % 16;
+  const row = 9 + Math.floor(directionIndex / ATLAS_COLUMNS);
+  const column = directionIndex % ATLAS_COLUMNS;
+  return Object.freeze({
+    angle: GAZE_ANGLES[directionIndex],
+    directionIndex,
+    row,
+    column,
+    x: column * CELL_WIDTH,
+    y: row * CELL_HEIGHT,
+  });
+}
+
+function canUseGaze(state, atlasRows) {
+  return state === "idle" && atlasRows === 11;
+}
+
+function pointerAngleDegrees(clientX, clientY, bounds) {
+  const dx = clientX - (bounds.left + bounds.width / 2);
+  const dy = clientY - (bounds.top + bounds.height / 2);
+  if (dx === 0 && dy === 0) return 0;
+  const angle = Math.atan2(dx, -dy) * 180 / Math.PI;
+  return (angle + 360) % 360;
+}
+
+class LoadGeneration {
+  constructor() {
+    this.current = 0;
+  }
+
+  begin() {
+    this.current += 1;
+    return this.current;
+  }
+
+  isCurrent(generation) {
+    return generation === this.current;
+  }
+}
+
+/** Drives any number of playback clocks with one chained timeout. */
+class PlaybackScheduler {
+  constructor({ getClocks, now, setTimeoutFn, clearTimeoutFn, onFrame = () => {} }) {
+    this.getClocks = getClocks;
+    this.now = now;
+    this.setTimeoutFn = setTimeoutFn;
+    this.clearTimeoutFn = clearTimeoutFn;
+    this.onFrame = onFrame;
+    this.timer = null;
+    this.generation = 0;
+  }
+
+  cancel() {
+    this.generation += 1;
+    if (this.timer !== null) {
+      this.clearTimeoutFn(this.timer);
+      this.timer = null;
+    }
+  }
+
+  schedule() {
+    this.cancel();
+    const now = this.now();
+    const activeClocks = this.getClocks().filter((clock) => clock?.running && !clock.gaze);
+    if (activeClocks.length === 0) return false;
+
+    const earliestDeadline = Math.min(...activeClocks.map((clock) => clock.deadline));
+    const dueClocks = activeClocks.filter((clock) => clock.deadline === earliestDeadline);
+    const delay = Math.max(0, earliestDeadline - now);
+    const scheduledGeneration = this.generation;
+    this.timer = this.setTimeoutFn(() => {
+      if (scheduledGeneration !== this.generation) return;
+      this.timer = null;
+      const callbackNow = this.now();
+      for (const clock of dueClocks) {
+        if (clock?.running && !clock.gaze && callbackNow >= clock.deadline) clock.tick(callbackNow);
+      }
+      this.onFrame(callbackNow);
+      this.schedule();
+    }, delay);
+    return true;
+  }
+}
+
+/**
+ * A deterministic playback clock. Pass timestamps from any clock, including a
+ * fake clock in tests. Like the host effect, a late callback advances once and
+ * starts the next dwell at callback time rather than catching up missed frames.
+ */
+class PlaybackClock {
+  constructor({ state = "idle", profile = "hostDot", now = 0, loop } = {}) {
+    this.setSequence(state, profile, now, loop);
+  }
+
+  setSequence(state, profile = "hostDot", now = 0, loop) {
+    const sequence = getSequence(state);
+    this.state = state;
+    this.profile = profile;
+    this.durations = getDurations(state, profile);
+    this.loop = loop ?? sequence.loop;
+    this.index = 0;
+    this.running = true;
+    this.deadline = now + this.durations[0];
+    this.remaining = this.durations[0];
+    this.gaze = null;
+    this.restore = null;
+    return this.snapshot(now);
+  }
+
+  tick(now) {
+    if (!Number.isFinite(now)) throw new TypeError("时间戳必须是有限数字。");
+    if (this.running && !this.gaze) {
+      if (now >= this.deadline) {
+        const nextIndex = this.index + 1;
+        if (nextIndex >= this.durations.length) {
+          if (!this.loop) {
+            this.index = this.durations.length - 1;
+            this.running = false;
+            this.remaining = 0;
+            this.deadline = Number.POSITIVE_INFINITY;
+          } else {
+            this.index = 0;
+          }
+        } else {
+          this.index = nextIndex;
+        }
+        if (this.running) {
+          this.remaining = this.durations[this.index];
+          this.deadline = now + this.remaining;
+        }
+      }
+      if (this.running) {
+        this.remaining = Math.max(0, this.deadline - now);
+      }
+    }
+    return this.snapshot(now);
+  }
+
+  pause(now) {
+    this.tick(now);
+    if (this.running && !this.gaze) {
+      this.remaining = Math.max(0, this.deadline - now);
+      this.running = false;
+    }
+    return this.snapshot(now);
+  }
+
+  resume(now) {
+    if (!this.gaze && !this.running) {
+      if (!this.loop && this.remaining <= 0) {
+        this.index = 0;
+        this.remaining = this.durations[0];
+      }
+      this.deadline = now + this.remaining;
+      this.running = true;
+    }
+    return this.snapshot(now);
+  }
+
+  step(delta, now) {
+    if (!Number.isInteger(delta) || delta === 0) throw new RangeError("逐帧步进值必须是非零整数。");
+    this.tick(now);
+    if (this.gaze) return this.snapshot(now);
+    this.running = false;
+    this.index = ((this.index + delta) % this.durations.length + this.durations.length) % this.durations.length;
+    this.remaining = this.durations[this.index];
+    this.deadline = Number.POSITIVE_INFINITY;
+    return this.snapshot(now);
+  }
+
+  reset(now) {
+    return this.restart(now, true);
+  }
+
+  restart(now, running = this.running) {
+    this.index = 0;
+    this.running = Boolean(running);
+    this.remaining = this.durations[0];
+    this.deadline = this.running ? now + this.remaining : Number.POSITIVE_INFINITY;
+    this.gaze = null;
+    this.restore = null;
+    return this.snapshot(now);
+  }
+
+  setGaze(angleDegrees, atlasRows, now) {
+    if (this.state !== "idle") throw new RangeError("视线覆盖只用于待机状态。");
+    const cell = getGazeCell(angleDegrees, atlasRows);
+    if (!this.gaze) {
+      this.restore = { running: this.running };
+    }
+    this.gaze = cell;
+    this.running = false;
+    return this.snapshot(now);
+  }
+
+  clearGaze(now) {
+    if (this.gaze) {
+      this.gaze = null;
+      this.index = 0;
+      this.remaining = this.durations[0];
+      this.running = this.restore?.running ?? true;
+      this.deadline = this.running ? now + this.remaining : Number.POSITIVE_INFINITY;
+      this.restore = null;
+    }
+    return this.snapshot(now);
+  }
+
+  setLoop(loop, now) {
+    if (!Number.isFinite(now)) throw new TypeError("重启时间戳必须是有限数字。");
+    const wasRunning = this.running;
+    this.loop = Boolean(loop);
+    this.restart(now, wasRunning);
+    return this;
+  }
+
+  snapshot(now) {
+    return Object.freeze({
+      state: this.state,
+      profile: this.profile,
+      index: this.index,
+      frameCount: this.durations.length,
+      durationMs: this.gaze ? null : this.durations[this.index],
+      remainingMs: this.gaze ? null : this.running ? Math.max(0, this.deadline - now) : this.remaining,
+      running: this.running,
+      completed: !this.running && !this.gaze && !this.loop && this.remaining === 0,
+      loop: this.loop,
+      gaze: this.gaze,
+      cell: this.gaze ?? getFrameCell(this.state, this.index, 11),
+    });
+  }
+}
+
+
+    globalThis.DotPetTiming = {
+      CELL_HEIGHT, CELL_WIDTH, LoadGeneration, PlaybackClock, PlaybackScheduler,
+      canUseGaze, getGazeCell, pointerAngleDegrees, sequenceDuration, validateAtlasDimensions,
+    };
+  })();
+
+const {
+  CELL_HEIGHT,
+  CELL_WIDTH,
+  LoadGeneration,
+  PlaybackClock,
+  PlaybackScheduler,
+  canUseGaze,
+  getGazeCell,
+  pointerAngleDegrees,
+  sequenceDuration,
+  validateAtlasDimensions,
+} = globalThis.DotPetTiming;
+
+const MAX_FILE_BYTES = 32 * 1024 * 1024;
+const $ = (selector) => document.querySelector(selector);
+const fileInput = $("#atlas-file");
+const fileStatus = $("#file-status");
+const stateSelect = $("#state-select");
+const loopToggle = $("#loop-toggle");
+const pixelToggle = $("#pixel-toggle");
+const gazeToggle = $("#gaze-toggle");
+const hostCanvas = $("#host-canvas");
+const oldCanvas = $("#old-canvas");
+const hostContext = hostCanvas.getContext("2d", { alpha: true });
+const oldContext = oldCanvas.getContext("2d", { alpha: true });
+
+let atlasBitmap = null;
+let atlasFormat = null;
+const atlasLoadGeneration = new LoadGeneration();
+let hostClock = new PlaybackClock({ state: "idle", profile: "hostDot", now: performance.now() });
+let oldClock = new PlaybackClock({ state: "idle", profile: "oldPreview", now: performance.now() });
+let lastPointerAngle = null;
+let pointerInside = false;
+const playbackScheduler = new PlaybackScheduler({
+  getClocks: () => [hostClock, oldClock],
+  now: () => performance.now(),
+  setTimeoutFn: (callback, delay) => window.setTimeout(callback, delay),
+  clearTimeoutFn: (timer) => window.clearTimeout(timer),
+  onFrame: (now) => updateControls(now),
+});
+
+function seconds(ms) {
+  return `${(ms / 1000).toFixed(2)} s`;
+}
+
+function showFileStatus(message, kind = "") {
+  fileStatus.textContent = message;
+  fileStatus.dataset.kind = kind;
+}
+
+function drawCell(context, canvas, cell) {
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  if (!atlasBitmap || !cell) return;
+  context.imageSmoothingEnabled = !pixelToggle.checked;
+  context.drawImage(
+    atlasBitmap,
+    cell.x,
+    cell.y,
+    CELL_WIDTH,
+    CELL_HEIGHT,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+}
+
+function setFrameReadout(element, snapshot) {
+  if (!atlasFormat) {
+    element.textContent = "请先载入图集";
+    return;
+  }
+  if (snapshot.gaze) {
+    element.innerHTML = `<strong>静态视线 ${snapshot.gaze.angle}°</strong> · 第 ${snapshot.gaze.row} 行 / 第 ${snapshot.gaze.column} 列<br>动画时序已暂停`;
+    return;
+  }
+  if (snapshot.completed) {
+    element.innerHTML = `<strong>第 ${snapshot.index + 1} / ${snapshot.frameCount} 帧</strong> · ${snapshot.durationMs} ms / 帧<br>单次播放已完成 · 继续将从首帧重播`;
+    return;
+  }
+  const remaining = Math.ceil(snapshot.remainingMs ?? 0);
+  const loopLabel = snapshot.loop ? "循环" : "单次";
+  element.innerHTML = `<strong>第 ${snapshot.index + 1} / ${snapshot.frameCount} 帧</strong> · ${snapshot.durationMs} ms / 帧<br>${loopLabel} · 下帧还有 ${remaining} ms`;
+}
+
+function updateControls(now = performance.now()) {
+  const host = hostClock.snapshot(now);
+  drawCell(hostContext, hostCanvas, host.cell);
+  setFrameReadout($("#host-readout"), host);
+
+  const oldActive = host.state === "idle";
+  $("#old-panel").classList.toggle("inactive", !oldActive);
+  if (oldActive) {
+    const old = oldClock.snapshot(now);
+    drawCell(oldContext, oldCanvas, old.cell);
+    setFrameReadout($("#old-readout"), old);
+  } else {
+    oldContext.clearRect(0, 0, oldCanvas.width, oldCanvas.height);
+    $("#old-readout").textContent = "";
+  }
+
+  $("#play-button").textContent = host.gaze ? "视线覆盖中" : host.running ? "暂停" : "继续";
+  if (host.completed) $("#play-button").textContent = "重播";
+  $("#play-button").disabled = Boolean(host.gaze);
+  $("#previous-button").disabled = Boolean(host.gaze);
+  $("#next-button").disabled = Boolean(host.gaze);
+  $("#reset-button").disabled = Boolean(host.gaze);
+  $("#clear-gaze-button").disabled = !gazeToggle.checked;
+  loopToggle.disabled = Boolean(host.gaze);
+  if (gazeToggle.checked) {
+    $("#gaze-status").textContent = host.gaze
+      ? `视线 ${host.gaze.angle}° · 覆盖动画`
+      : pointerInside ? "指针跟随开启" : "指针跟随开启 · 在角色框内移动鼠标";
+  } else {
+    $("#gaze-status").textContent = "指针跟随关闭";
+  }
+}
+
+function updateGazeAvailability() {
+  const available = canUseGaze(hostClock.state, atlasFormat?.rows);
+  if (!available) {
+    gazeToggle.checked = false;
+    if (hostClock.gaze) hostClock.clearGaze(performance.now());
+  }
+  gazeToggle.disabled = !available;
+}
+
+function stopGazeTracking(now) {
+  if (hostClock.gaze) hostClock.clearGaze(now);
+  else if (hostClock.state === "idle") hostClock.restart(now, hostClock.running);
+}
+
+function updateStateLabels(state) {
+  const isIdle = state === "idle";
+  const isMain = state === "idle" || state === "work";
+  const label = stateSelect.selectedOptions[0].textContent.split(" · ")[0];
+  const timingMs = sequenceDuration(state, "hostDot");
+  $("#host-title").textContent = `${isMain ? "Dot host" : "桌面端扩展"} · ${label}`;
+  $("#host-subtitle").textContent = `${isMain ? "宿主节奏" : "桌面端动作参考"} · 原始 192 × 208 单元格`;
+  $("#state-description").textContent = isMain
+    ? `${label}循环 · Dot 主模式${state === "work" ? "（持续工作时重复）" : ""}`
+    : `${label} · 桌面端扩展动作，按宿主参考时序循环`;
+  const count = hostClock.durations.length;
+  $("#state-tag").textContent = `${count} 帧${loopToggle.checked ? "循环" : "单次"}`;
+  $("#host-cycle").textContent = seconds(timingMs);
+  $("#old-cycle").textContent = isIdle ? seconds(sequenceDuration("idle", "oldPreview")) : "无旧版参考";
+  if (isIdle) {
+    $("#old-panel").querySelector("h3").textContent = "旧预览 · 待机";
+    $("#old-panel").querySelector(".panel-subtitle").textContent = "旧预览待机节奏 · 6.0× 快于宿主";
+  } else {
+    $("#old-panel").querySelector("h3").textContent = "旧预览对照";
+    $("#old-panel").querySelector(".panel-subtitle").textContent = "这个状态没有旧预览时序记录；参考见左侧宿主帧";
+    $("#old-panel").querySelector(".placeholder").textContent = "没有旧版\n时序参考";
+  }
+}
+
+function applyPointerGaze(angle, now = performance.now()) {
+  if (!gazeToggle.checked || !atlasFormat || !canUseGaze(hostClock.state, atlasFormat.rows)) return;
+  try {
+    const cell = getGazeCell(angle, atlasFormat.rows);
+    hostClock.setGaze(angle, atlasFormat.rows, now);
+    lastPointerAngle = cell.angle;
+    updateControls(now);
+    playbackScheduler.schedule();
+  } catch (error) {
+    gazeToggle.checked = false;
+    hostClock.clearGaze(now);
+    showFileStatus(error.message, "error");
+    updateControls(now);
+    playbackScheduler.schedule();
+  }
+}
+
+function setState(state) {
+  const now = performance.now();
+  gazeToggle.checked = false;
+  hostClock = new PlaybackClock({ state, profile: "hostDot", now, loop: loopToggle.checked });
+  oldClock = state === "idle" ? new PlaybackClock({ state: "idle", profile: "oldPreview", now, loop: loopToggle.checked }) : null;
+  updateGazeAvailability();
+  updateStateLabels(state);
+  updateControls(now);
+  playbackScheduler.schedule();
+}
+
+function onPointerMove(event) {
+  pointerInside = true;
+  const bounds = $("#host-stage").getBoundingClientRect();
+  lastPointerAngle = pointerAngleDegrees(event.clientX, event.clientY, bounds);
+  if (gazeToggle.checked && atlasFormat) applyPointerGaze(lastPointerAngle);
+}
+
+function onPointerLeave() {
+  pointerInside = false;
+  if (hostClock?.gaze) hostClock.clearGaze(performance.now());
+  updateControls();
+  playbackScheduler.schedule();
+}
+
+async function loadAtlas(file, generation) {
+  if (!file || !atlasLoadGeneration.isCurrent(generation)) return;
+  const extension = file.name.toLowerCase().split(".").pop();
+  const allowedTypes = new Set(["image/png", "image/webp"]);
+  if ((file.type && !allowedTypes.has(file.type)) || (!allowedTypes.has(file.type) && !["png", "webp"].includes(extension))) {
+    showFileStatus("请选择 PNG 或 WebP 图集。", "error");
+    return;
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    showFileStatus("文件超过 32 MiB；为保持预览器轻量，请先导出更小的图集文件。", "error");
+    return;
+  }
+
+  showFileStatus("正在本机解码并检查尺寸…");
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+    if (!atlasLoadGeneration.isCurrent(generation)) {
+      bitmap.close();
+      return;
+    }
+    const format = validateAtlasDimensions(bitmap.width, bitmap.height);
+    const now = performance.now();
+    const hostShouldRun = hostClock.restore?.running ?? hostClock.running;
+    const oldShouldRun = oldClock?.running ?? false;
+    if (atlasBitmap) atlasBitmap.close();
+    atlasBitmap = bitmap;
+    atlasFormat = format;
+    gazeToggle.checked = false;
+    hostClock.restart(now, hostShouldRun);
+    oldClock?.restart(now, oldShouldRun);
+    updateGazeAvailability();
+    showFileStatus(`已载入 ${format.version} 图集 · ${bitmap.width} × ${bitmap.height} · ${format.rows} 行；图像仅保留在当前页面内存中。播放从当前状态首帧开始。`, "success");
+    updateControls(now);
+    playbackScheduler.schedule();
+  } catch (error) {
+    bitmap?.close();
+    if (atlasLoadGeneration.isCurrent(generation)) {
+      showFileStatus(error instanceof RangeError ? error.message : "无法解码此图像，请确认文件是有效的 PNG 或 WebP。", "error");
+    }
+  }
+}
+
+fileInput.addEventListener("change", () => {
+  const generation = atlasLoadGeneration.begin();
+  const file = fileInput.files?.[0];
+  fileInput.value = "";
+  if (file) void loadAtlas(file, generation);
+});
+stateSelect.addEventListener("change", () => setState(stateSelect.value));
+$("#play-button").addEventListener("click", () => {
+  const now = performance.now();
+  const snapshot = hostClock.snapshot(now);
+  if (snapshot.gaze) return;
+  if (snapshot.running) {
+    hostClock.pause(now);
+    oldClock?.pause(now);
+  } else {
+    hostClock.resume(now);
+    oldClock?.resume(now);
+  }
+  updateControls(now);
+  playbackScheduler.schedule();
+});
+$("#previous-button").addEventListener("click", () => {
+  const now = performance.now();
+  oldClock?.step(-1, now);
+  hostClock.step(-1, now);
+  updateControls(now);
+  playbackScheduler.schedule();
+});
+$("#next-button").addEventListener("click", () => {
+  const now = performance.now();
+  oldClock?.step(1, now);
+  hostClock.step(1, now);
+  updateControls(now);
+  playbackScheduler.schedule();
+});
+$("#reset-button").addEventListener("click", () => {
+  const now = performance.now();
+  hostClock.reset(now);
+  oldClock?.reset(now);
+  updateControls(now);
+  playbackScheduler.schedule();
+});
+loopToggle.addEventListener("change", () => {
+  const now = performance.now();
+  hostClock.setLoop(loopToggle.checked, now);
+  oldClock?.setLoop(loopToggle.checked, now);
+  updateStateLabels(stateSelect.value);
+  updateControls(now);
+  playbackScheduler.schedule();
+});
+pixelToggle.addEventListener("change", () => {
+  $("#host-stage").classList.toggle("smooth", !pixelToggle.checked);
+  $("#old-stage").classList.toggle("smooth", !pixelToggle.checked);
+  updateControls();
+});
+$("#size-select").addEventListener("change", (event) => {
+  document.documentElement.style.setProperty("--preview-size", `${event.target.value}px`);
+});
+gazeToggle.addEventListener("change", () => {
+  const now = performance.now();
+  if (gazeToggle.checked) {
+    if (!atlasFormat || !canUseGaze(hostClock.state, atlasFormat.rows)) {
+      gazeToggle.checked = false;
+      showFileStatus("视线跟随仅支持 v2 图集的待机状态。", "error");
+      return;
+    }
+    try {
+      getGazeCell(0, atlasFormat.rows);
+      if (lastPointerAngle !== null && pointerInside) applyPointerGaze(lastPointerAngle, now);
+    } catch (error) {
+      gazeToggle.checked = false;
+      showFileStatus(error.message, "error");
+    }
+  } else {
+    stopGazeTracking(now);
+    showFileStatus(atlasFormat ? `${atlasFormat.version} 图集已载入；视线覆盖结束，待机从首帧重新开始。` : "尚未载入图集。预览器不会保存或上传所选文件。", atlasFormat ? "success" : "");
+  }
+  updateControls(now);
+  playbackScheduler.schedule();
+});
+$("#clear-gaze-button").addEventListener("click", () => {
+  const now = performance.now();
+  gazeToggle.checked = false;
+  stopGazeTracking(now);
+  updateControls(now);
+  playbackScheduler.schedule();
+});
+$("#idle-button").addEventListener("click", () => {
+  gazeToggle.checked = false;
+  stateSelect.value = "idle";
+  loopToggle.checked = true;
+  setState("idle");
+});
+$("#host-stage").addEventListener("pointermove", onPointerMove);
+$("#host-stage").addEventListener("pointerenter", () => { pointerInside = true; });
+$("#host-stage").addEventListener("pointerleave", onPointerLeave);
+window.addEventListener("beforeunload", () => {
+  playbackScheduler.cancel();
+  atlasBitmap?.close();
+}, { once: true });
+
+updateGazeAvailability();
+updateStateLabels("idle");
+updateControls();
+playbackScheduler.schedule();
+function animate(now) {
+  updateControls(now);
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+})();
+  </script>
+  <!-- PREVIEW-APP-END -->
+</body>
+</html>

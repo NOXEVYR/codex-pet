@@ -1,0 +1,14 @@
+{
+  "artworkRevision": "2026-10-02-awake-breathing-01",
+  "status": "debug",
+  "spriteVersionNumber": 2,
+  "width": 1536,
+  "height": 2288,
+  "encodedBytes": 2746680,
+  "sha256": "5fb8f25a57540be78224866ae6d711136259138039bc8098d681f6304baad5ec",
+  "changedRows": [0],
+  "idleFrameDurationsMs": [1680,660,660,840,840,1920],
+  "hostTimingEvidence": "Installed Codex 26.928.3736.0; web real-time cadence not independently measured",
+  "validation": "Pets structural validator and bundled quality gate passed; native-size and 64px independent visual review passed",
+  "remaining": "Actual Dot experience and other clients require continued testing"
+}
